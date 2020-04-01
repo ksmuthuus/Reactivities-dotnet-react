@@ -1,9 +1,9 @@
 import React, { useState, useEffect, Fragment } from "react";
 import { Container } from "semantic-ui-react";
-import axios from "axios";
 import { IActivity } from "../model/Activity";
 import NavBar from "../../features/nav/NavBar";
 import { ActivityDashBoard } from "../../features/activity/dashboard/ActivityDashBoard";
+import agent from "../api/agent";
 
 const App = () => {
   const [activities, setActivities] = useState<IActivity[]>([]);
@@ -18,22 +18,32 @@ const App = () => {
   };
 
   const handleCreateActivity = (activity: IActivity) => {
-    setActivities([...activities, activity]);
-    setSelectedActivity(activity);
-    setEditMode(false);
+    agent.Activities.create(activity).then(() => {
+      setActivities([...activities, activity]);
+      setSelectedActivity(activity);
+      setEditMode(false);
+    });
   };
 
   const handleEditActivity = (activity: IActivity) => {
-    setActivities([...activities.filter(a => a.id !== activity.id), activity]);
-    setSelectedActivity(activity);
-    setEditMode(false);
+    agent.Activities.update(activity).then(() => {
+      setActivities([
+        ...activities.filter(a => a.id !== activity.id),
+        activity
+      ]);
+      setSelectedActivity(activity);
+      setEditMode(false);
+    });
   };
 
   const handleDeleteActivity = (id: string) => {
-    if (selectedActivity && selectedActivity.id === id) {
-      setSelectedActivity(null);
-    }
-    setActivities([...activities.filter(a => a.id !== id)]);
+    agent.Activities.delete(id).then(() => {
+      setActivities([...activities.filter(a => a.id !== id)]);
+      //If the deleted activity is current selected activity
+      if (selectedActivity && selectedActivity.id === id) {
+        setSelectedActivity(null);
+      }
+    });
   };
 
   const handleSelectActivity = (id: string) => {
@@ -42,16 +52,14 @@ const App = () => {
   };
 
   useEffect(() => {
-    axios
-      .get<IActivity[]>("http://localhost:5000/api/activities")
-      .then(response => {
-        let activities: IActivity[] = [];
-        response.data.forEach(activity => {
-          activity.date = activity.date.split(".")[0];
-          activities.push(activity);
-        });
-        setActivities(activities);
+    agent.Activities.list().then(response => {
+      let activities: IActivity[] = [];
+      response.forEach(activity => {
+        activity.date = activity.date.split(".")[0];
+        activities.push(activity);
       });
+      setActivities(activities);
+    });
   }, []);
 
   return (
